@@ -61,3 +61,25 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+# GitHub Linguist language overrides
+###############################################################################
+# Prioritize and detect Rust as the primary language of the repository
+*.rs linguist-detectable=true
+*.rs linguist-language=Rust
+rust/** linguist-detectable=true
+rust/** linguist-language=Rust
+rust/** linguist-vendored=false
+rust/** linguist-generated=false
+
+# Exclude test fixtures, characterization test cases, and tools from stats
+rust/app-cases/** linguist-vendored=true
+rust/fixtures/** linguist-vendored=true
+tools/** linguist-vendored=true
+
+# Mark legacy C# reference implementation as vendored so Rust indexes as primary
+Witcher3StringEditor/** linguist-vendored=true
+Witcher3StringEditor.*/** linguist-vendored=true
+NexusIntegration/** linguist-vendored=true
+
