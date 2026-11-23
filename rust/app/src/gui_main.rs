@@ -1,4 +1,4 @@
-//! GUI entry point for Witcher3StringEditor desktop app.
+//! Native Linux desktop GUI entry point for Witcher3StringEditor (egui/eframe).
 #![forbid(unsafe_code)]
 
 mod gui;

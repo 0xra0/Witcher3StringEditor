@@ -73,13 +73,17 @@ rust/** linguist-language=Rust
 rust/** linguist-vendored=false
 rust/** linguist-generated=false
 
+# Completely exclude all legacy C# files from repository language statistics
+*.cs linguist-detectable=false
+*.cs linguist-vendored=true
+*.xaml linguist-detectable=false
+*.xaml linguist-vendored=true
+Witcher3StringEditor/** linguist-vendored=true
+Witcher3StringEditor.*/** linguist-vendored=true
+NexusIntegration/** linguist-vendored=true
+
 # Exclude test fixtures, characterization test cases, and tools from stats
 rust/app-cases/** linguist-vendored=true
 rust/fixtures/** linguist-vendored=true
 tools/** linguist-vendored=true
-
-# Mark legacy C# reference implementation as vendored so Rust indexes as primary
-Witcher3StringEditor/** linguist-vendored=true
-Witcher3StringEditor.*/** linguist-vendored=true
-NexusIntegration/** linguist-vendored=true
 
