@@ -38,13 +38,13 @@ Originally built in C# (.NET/WPF), this project has been rewritten into **100% p
 
 ## Screenshots
 
-![Main Window](https://staticdelivery.nexusmods.com/mods/952/images/10032/10032-1755524172-1319856400.png)  
+![Main Window](assets/main_window.png)  
 *Main interface with virtualized string entries, live search, and pagination*
 
-![Backup Dialog](https://staticdelivery.nexusmods.com/mods/952/images/10032/10032-1739770257-1910199133.png)  
+![Backup Dialog](assets/backup_dialog.png)  
 *Backup management with restore and delete options*
 
-![Translation Tool](https://staticdelivery.nexusmods.com/mods/952/images/10032/10032-1755524172-877884616.png)  
+![Translation Tool](assets/translation_dialog.png)  
 *Built-in translation helper with single-item and batch processing*
 
 ---
