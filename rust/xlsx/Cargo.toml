@@ -1,0 +1,10 @@
+[package]
+name = "xlsx-rs"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+w3codec-rs = { path = "../w3codec" }
+calamine = "0.38"
+rust_xlsxwriter = "0.104"

@@ -1,0 +1,10 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "..",
+  "unit": "Witcher3StringEditor.Serializers",
+  "language": "csharp",
+  "kind": "ffi",
+  "crate_name": "w3codec-rs",
+  "exports": [],
+  "classes": []
+}

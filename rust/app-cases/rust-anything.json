@@ -1,0 +1,12 @@
+{
+  "schema": "rust-anything/app-cases@1",
+  "name": "harness",
+  "run": [
+    "dotnet",
+    "tools/harness/bin/Release/net10.0/harness.dll"
+  ],
+  "timeout_secs": 30,
+  "fresh": [
+    "rust/fixtures"
+  ]
+}

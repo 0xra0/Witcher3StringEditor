@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["hash", "👨‍👩‍👧 family"]
+status.code = 0
+fs.sandbox = true

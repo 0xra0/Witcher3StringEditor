@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "rust/fixtures/cn-164.w3strings", "日本語"]
+status.code = 0
+fs.sandbox = true

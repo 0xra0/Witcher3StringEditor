@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "rust/fixtures/bad-magic.w3strings", "İstanbul"]
+status.code = 3
+fs.sandbox = true

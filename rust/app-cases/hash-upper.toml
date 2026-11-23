@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["hash", "LABEL_MAIN_MENU_OPTIONS"]
+status.code = 0
+fs.sandbox = true

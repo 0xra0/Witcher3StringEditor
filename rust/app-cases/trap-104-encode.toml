@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["encode", "İstanbul", "out", "en", "utf8"]
+status.code = 3
+fs.sandbox = true

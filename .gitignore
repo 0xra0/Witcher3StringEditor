@@ -358,3 +358,10 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# Rust / Cargo
+target/
+**/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock

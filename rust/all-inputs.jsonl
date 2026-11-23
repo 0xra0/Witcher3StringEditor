@@ -1,0 +1,48 @@
+{"name": "hash-simple", "args": ["hash", "label_main_menu_new_game"]}
+{"name": "hash-upper", "args": ["hash", "LABEL_MAIN_MENU_OPTIONS"]}
+{"name": "hash-empty", "args": ["hash", ""]}
+{"name": "hash-turkish", "args": ["hash", "İstanbul"]}
+{"name": "hash-emoji", "args": ["hash", "🎮⚔️"]}
+{"name": "hash-cjk", "args": ["hash", "杰洛特"]}
+{"name": "decode-bad-magic", "args": ["decode", "rust/fixtures/bad-magic.w3strings", "out.json"]}
+{"name": "decode-cn-162", "args": ["decode", "rust/fixtures/cn-162.w3strings", "out.json"]}
+{"name": "decode-cn-164", "args": ["decode", "rust/fixtures/cn-164.w3strings", "out.json"]}
+{"name": "decode-community-162-utf8", "args": ["decode", "rust/fixtures/community-162-utf8.w3strings", "out.json"]}
+{"name": "decode-en-162", "args": ["decode", "rust/fixtures/en-162.w3strings", "out.json"]}
+{"name": "decode-en-164", "args": ["decode", "rust/fixtures/en-164.w3strings", "out.json"]}
+{"name": "decode-truncated-buffer", "args": ["decode", "rust/fixtures/truncated-buffer.w3strings", "out.json"]}
+{"name": "decode-truncated-head", "args": ["decode", "rust/fixtures/truncated-head.w3strings", "out.json"]}
+{"name": "encode-bad-strid-utf8", "args": ["encode", "rust/fixtures/in-bad-strid.json", "out", "en", "utf8"]}
+{"name": "encode-bad-strid-utf16", "args": ["encode", "rust/fixtures/in-bad-strid.json", "out", "en", "utf16"]}
+{"name": "csv-encode-bad-strid", "args": ["csv-encode", "rust/fixtures/in-bad-strid.json", "out", "en"]}
+{"name": "encode-duplicates-utf8", "args": ["encode", "rust/fixtures/in-duplicates.json", "out", "en", "utf8"]}
+{"name": "encode-duplicates-utf16", "args": ["encode", "rust/fixtures/in-duplicates.json", "out", "en", "utf16"]}
+{"name": "csv-encode-duplicates", "args": ["csv-encode", "rust/fixtures/in-duplicates.json", "out", "en"]}
+{"name": "encode-empty-utf8", "args": ["encode", "rust/fixtures/in-empty.json", "out", "en", "utf8"]}
+{"name": "encode-empty-utf16", "args": ["encode", "rust/fixtures/in-empty.json", "out", "en", "utf16"]}
+{"name": "csv-encode-empty", "args": ["csv-encode", "rust/fixtures/in-empty.json", "out", "en"]}
+{"name": "encode-hash-only-utf8", "args": ["encode", "rust/fixtures/in-hash-only.json", "out", "en", "utf8"]}
+{"name": "encode-hash-only-utf16", "args": ["encode", "rust/fixtures/in-hash-only.json", "out", "en", "utf16"]}
+{"name": "csv-encode-hash-only", "args": ["csv-encode", "rust/fixtures/in-hash-only.json", "out", "en"]}
+{"name": "encode-inconsistent-utf8", "args": ["encode", "rust/fixtures/in-inconsistent.json", "out", "en", "utf8"]}
+{"name": "encode-inconsistent-utf16", "args": ["encode", "rust/fixtures/in-inconsistent.json", "out", "en", "utf16"]}
+{"name": "csv-encode-inconsistent", "args": ["csv-encode", "rust/fixtures/in-inconsistent.json", "out", "en"]}
+{"name": "encode-invalid-hex-utf8", "args": ["encode", "rust/fixtures/in-invalid-hex.json", "out", "en", "utf8"]}
+{"name": "encode-invalid-hex-utf16", "args": ["encode", "rust/fixtures/in-invalid-hex.json", "out", "en", "utf16"]}
+{"name": "csv-encode-invalid-hex", "args": ["csv-encode", "rust/fixtures/in-invalid-hex.json", "out", "en"]}
+{"name": "encode-keyless-utf8", "args": ["encode", "rust/fixtures/in-keyless.json", "out", "en", "utf8"]}
+{"name": "encode-keyless-utf16", "args": ["encode", "rust/fixtures/in-keyless.json", "out", "en", "utf16"]}
+{"name": "csv-encode-keyless", "args": ["csv-encode", "rust/fixtures/in-keyless.json", "out", "en"]}
+{"name": "encode-keynames-utf8", "args": ["encode", "rust/fixtures/in-keynames.json", "out", "en", "utf8"]}
+{"name": "encode-keynames-utf16", "args": ["encode", "rust/fixtures/in-keynames.json", "out", "en", "utf16"]}
+{"name": "csv-encode-keynames", "args": ["csv-encode", "rust/fixtures/in-keynames.json", "out", "en"]}
+{"name": "encode-zero-key-utf8", "args": ["encode", "rust/fixtures/in-zero-key.json", "out", "en", "utf8"]}
+{"name": "encode-zero-key-utf16", "args": ["encode", "rust/fixtures/in-zero-key.json", "out", "en", "utf16"]}
+{"name": "csv-encode-zero-key", "args": ["csv-encode", "rust/fixtures/in-zero-key.json", "out", "en"]}
+{"name": "csv-decode-en", "args": ["csv-decode", "rust/fixtures/en.csv", "out.json"]}
+{"name": "csv-decode-cn", "args": ["csv-decode", "rust/fixtures/cn.csv", "out.json"]}
+{"name": "settings-default-settings-default", "args": ["settings-default", "out.json"]}
+{"name": "settings-roundtrip-settings-full", "args": ["settings-roundtrip", "rust/fixtures/settings-full.json", "out.json"]}
+{"name": "settings-roundtrip-settings-unknown", "args": ["settings-roundtrip", "rust/fixtures/settings-unknown.json", "out.json"]}
+{"name": "settings-roundtrip-settings-minimal", "args": ["settings-roundtrip", "rust/fixtures/settings-minimal.json", "out.json"]}
+{"name": "settings-roundtrip-settings-tricky", "args": ["settings-roundtrip", "rust/fixtures/settings-tricky.json", "out.json"]}

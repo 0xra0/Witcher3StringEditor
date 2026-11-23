@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["settings-roundtrip", "rust/fixtures/settings-unknown.json", "out.json"]
+status.code = 0
+fs.sandbox = true

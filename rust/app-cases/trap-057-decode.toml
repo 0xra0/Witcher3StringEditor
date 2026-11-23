@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "rust/fixtures/community-162-utf8.w3strings", "👨‍👩‍👧 family"]
+status.code = 0
+fs.sandbox = true

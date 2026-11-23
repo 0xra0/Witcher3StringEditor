@@ -1,0 +1,1 @@
+usage: harness hash <key> | decode <in.w3strings> <out.json> | encode <in.json> <outdir> <langCode> <utf8|utf16> | csv-decode <in> <out.json> | csv-encode <in.json> <outdir> <langCode> | gen-fixtures <dir> | settings-default <out.json> | settings-roundtrip <in.json> <out.json>

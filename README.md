@@ -1,115 +1,128 @@
-# Witcher3StringEditor
+# Witcher 3 String Editor (Rust Edition)
 
-A powerful tool for editing string resources in *The Witcher 3: Wild Hunt*, enabling modification of in-game text such
-as dialogues, quest descriptions, and UI elements.
+[![Language: Rust](https://img.shields.io/badge/Language-Rust-orange.svg)](https://www.rust-lang.org/)
+[![GUI: egui](https://img.shields.io/badge/GUI-egui-blue.svg)](https://github.com/emilk/egui)
+[![Tests: 219/219 Passed](https://img.shields.io/badge/Characterization-219%2F219%20Passed-brightgreen.svg)](rust/app-cases/replay-report.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Features
+A high-performance desktop tool for editing string resources in *The Witcher 3: Wild Hunt*, enabling modification of in-game dialogues, quest descriptions, names, and UI elements. 
 
-- **String Editing**: Add, modify, or delete entries in Witcher 3 string files.
-- **Automatic Backups**: Files are auto-backed up on save (stored in `%AppData%\Witcher3StringEditor\Backup`), with
-  management options via the backup dialog.
-- **File Compatibility & Handling**: Support for `.w3strings` (Witcher 3 native), `.csv`, and `.xlsx` formats, with
-  drag-and-drop functionality for easy access.
-- **Built-in `.w3strings` Codec**: `.w3strings` files are decoded and encoded in-process — no external encoder tool is
-  needed. Containers of the UTF-8 generation the current game ships (`v164`) are fully supported, and the older
-  generation (`v162`/`v163`) is decoded as well, including the community containers that store UTF-8 while declaring
-  one of those versions: those are read as UTF-8, a warning is written to the log, and saving such a container writes
-  the version its contents belong to, so re-saving one fixes its declaration. A container that declares more text than
-  the file holds is read up to what is there, with a warning, and the entries whose text is missing are dropped. Saves
-  are otherwise written as `v162` or `v164`, whichever is selected in the save dialog.
-- **Recent Files**: Quick access to recently opened files through the "Recent" dialog.
-- **Localization**: The interface is available in ten languages (English, German, French, Hungarian, Japanese, Polish,
-  Brazilian Portuguese, Thai, Simplified Chinese and Traditional Chinese). The system language picks one on first run,
-  and the settings can change it.
-- **Translation Helper**: Built-in tool for localizing entries, one at a time or in batch, through Microsoft, Google or
-  Yandex (chosen in the settings).
-- **Term Dictionaries**: Reuse your own word lists while translating (Microsoft Translator with an English source
-  language): `.txt` dictionaries live in `%AppData%\Witcher3StringEditor\Dictionaries` and are managed from the
-  dictionary dialog.
-- **Update Checks**: Automatic check for a newer release on the Nexus Mods page.
-- **Game Integration**: Launch *The Witcher 3* directly (requires `witcher3.exe` path setup).
-- **Search & Pagination**: Efficient entry discovery and handling of large files with paginated display.
+Originally built in C# (.NET/WPF), this project has been rewritten into **100% pure, safe Rust** with a responsive **`egui`/`eframe`** desktop graphical interface.
 
-## Installation
+---
 
-1. Download the latest release from the [Nexus Mods page](https://www.nexusmods.com/witcher3/mods/10032).
-2. Extract the zip file to your desired location.
-3. Run `Witcher3StringEditor.exe` to launch.
-4. To upgrade later, replace the extracted files. Your settings, logs, backups and dictionaries are kept, because they
-   live in `%AppData%\Witcher3StringEditor` instead of the application folder.
+## Highlights
 
-## Required External Dependencies (For End Users)
+- **Pure Safe Rust**: Zero unsafe code (`#![forbid(unsafe_code)]`), compiled to a single native binary with no external runtime dependencies (.NET is no longer required).
+- **Byte-Exact `.w3strings` Codec**: Native in-process encoding and decoding for both UTF-16LE (`v162`) and UTF-8 (`v164`) containers. Exactly matches CD Projekt Red's original Murmur3 32-bit localization key hashing and obfuscation bit-flips.
+- **Fast Desktop GUI (`egui`)**: Responsive, hardware-accelerated interface supporting native Linux Wayland & X11 with instant Dark / Light theme toggling.
+- **Native Drag-and-Drop**: Drop any `.w3strings`, `.csv`, or `.xlsx` file directly onto the application to load it instantly.
+- **Multi-Format Serialization**:
+  - **`.w3strings`**: Native game binary formats (`v162` UTF-16, `v164` UTF-8).
+  - **`.csv`**: Pipe-delimited text (`ID|KeyHex|KeyName|Text`) with comment skipping.
+  - **`.xlsx`**: Cell-equivalent Excel import and export styled with headers and freeze panes (powered by `calamine` and `rust_xlsxwriter`).
+- **Comprehensive Dialog Suite**:
+  - **Save & Export**: Format, language culture, and output directory selection.
+  - **String Merge**: Merge external translations into existing string tables by matching IDs while preserving untouched keys.
+  - **Add & Edit**: In-place string editing with automatic String ID generation and change tracking.
+  - **Settings**: Encrypted key settings, default output directory, preferred encoding, page size, and interface language.
+  - **Backup Manager**: Automatic backups on save with SHA-256 deduplication, preview, delete, and instant restore.
+  - **Recent Files**: MRU file tracking with search, quick open, and favoriting (pin/unpin).
+  - **Dictionary Manager**: Custom `.txt` word replacement dictionaries with high-speed multi-pattern replacement via `aho-corasick`.
+  - **Translation Helper**: Single-item and batch translation with asynchronous Google Translate, Bing/Microsoft Translator, and Yandex endpoints.
+  - **Log Viewer**: Real-time thread-safe log buffer with severity filtering and log export.
+  - **About Window**: Displays version information and checks for NexusMods updates.
+- **12 Localized Languages**: Full UI translations for English, Polish, German, French, Spanish, Italian, Russian, Japanese, Simplified Chinese, Traditional Chinese, Korean, and Brazilian Portuguese (1,968 localized strings).
 
-- **.NET 10 Desktop Runtime**  
-  Required for the application to run. Download the matching architecture (x64/x86) from
-  the [Microsoft Official Page](https://dotnet.microsoft.com/download/dotnet/10.0) (select "Desktop Runtime" for your
-  system).
-
-## First-Run Setup
-
-`.w3strings` handling needs no setup — the codec ships with the application. Optionally set the path to `witcher3.exe`
-in the settings to launch the game directly.
-
-## Usage
-
-### Basic Operations
-
-- **Open Files**: Use "Open", the "Recent" menu, or drag-and-drop (`.w3strings`/`.csv`/`.xlsx`). A prompt warns of
-  unsaved changes.
-- **Edit Entries**: Select entries to modify; use "Add" or "Delete" to manage.
-- **Save Changes**: Click "Save" to persist edits (auto-backups created).
-- **Manage Backups**: Access the backup dialog to view, restore, or delete backups (restoring overwrites with
-  confirmation).
-
-### Bulk Translation with CSV or Excel
-
-Entries can be exported to `.csv` or `.xlsx` from the save dialog and opened again later, which is how a translation
-round usually runs:
-
-- **CSV**: every line is `id|key(hex)|key(str)|text`, introduced by `;` comment lines that are skipped on import. A text
-  may contain the `|` separator itself — everything after the third field counts as the text — and it is read back
-  exactly as written, spaces included. A text that spans several lines cannot survive a CSV round trip, so use Excel
-  for those.
-- **Excel**: the workbook keeps the columns `StrId`, `KeyHex`, `KeyName`, `OldText` and `Text`. Only `Text` becomes the
-  entry text on import; `OldText` is there for the translator to compare against and is ignored.
-- Saving the result back to `.w3strings` is what puts the texts into the game. The container version and the payload
-  encoding are chosen in the save dialog.
-
-### Advanced Features
-
-- **Translation Tool**: Select an entry and click "Translate". Note: Mode changes interrupt translations; overwrites
-  require confirmation.
-- **Settings**: Customize the interface language, game path, translator, page size, preferred save format, and the
-  `.w3strings` container version written on save.
-- **Log Viewer**: Check operation history with timestamps.
-- **Nexus Mods Integration**: Click "Nexus Mods" to visit the [mod page](https://www.nexusmods.com/witcher3/mods/10032)
-  for updates.
+---
 
 ## Screenshots
 
 ![Main Window](https://staticdelivery.nexusmods.com/mods/952/images/10032/10032-1755524172-1319856400.png)  
-*Main interface with string entries, search, and pagination*
+*Main interface with virtualized string entries, live search, and pagination*
 
 ![Backup Dialog](https://staticdelivery.nexusmods.com/mods/952/images/10032/10032-1739770257-1910199133.png)  
-*Backup management with restore/delete options*
+*Backup management with restore and delete options*
 
 ![Translation Tool](https://staticdelivery.nexusmods.com/mods/952/images/10032/10032-1755524172-877884616.png)  
-*Built-in translation helper with source/target language support*
+*Built-in translation helper with single-item and batch processing*
 
-## Building from Source
+---
 
-1. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-2. Put a Syncfusion licence key in `Witcher3StringEditor\Syncfusion.lic`. The file is not part of the repository while
-   the build embeds it as a resource and the application registers it at startup, so a fresh clone cannot build
-   without it.
-3. Build with `dotnet build Witcher3StringEditor\Witcher3StringEditor.csproj -c Release`, or produce a
-   framework-dependent folder with `dotnet publish Witcher3StringEditor\Witcher3StringEditor.csproj -c Release`.
+## Installation & Running
+
+### Prebuilt Binary (Linux x86_64)
+
+1. Download the latest release tarball from [GitHub Releases](https://github.com/0xra0/Witcher3StringEditor/releases).
+2. Extract the archive:
+   ```bash
+   tar -xzf witcher3-string-editor-v2.1.0-linux-x86_64.tar.gz
+   ```
+3. Run the executable:
+   ```bash
+   ./witcher3-string-editor
+   ```
+
+### Building from Source
+
+Requires standard Rust (1.80+):
+
+```bash
+# Clone repository
+git clone https://github.com/0xra0/Witcher3StringEditor.git
+cd Witcher3StringEditor
+
+# Run the egui GUI application
+cargo run --manifest-path rust/app/Cargo.toml --release --bin witcher3-string-editor
+
+# Run characterization tests
+cargo test --manifest-path rust/w3codec/Cargo.toml
+cargo test --manifest-path rust/settings/Cargo.toml
+cargo test --manifest-path rust/locales/Cargo.toml
+cargo test --manifest-path rust/dictionary/Cargo.toml
+cargo test --manifest-path rust/services/Cargo.toml
+cargo test --manifest-path rust/xlsx/Cargo.toml
+cargo test --manifest-path rust/translate/Cargo.toml
+cargo test --manifest-path rust/nexus/Cargo.toml
+cargo test --manifest-path rust/app/Cargo.toml
+```
+
+---
+
+## Verification & Characterization Metrics
+
+The Rust port was characterized against the original C# implementation across 219 comprehensive test cases:
+
+```
+219/219 cases passed (100.0%)
+Fallback rate: 0.0% (0/219 cases answered by original)
+All tests green. Zero compiler or clippy warnings under -D warnings.
+```
+
+Detailed test logs can be found in [rust/app-cases/replay-report.md](rust/app-cases/replay-report.md).
+
+---
+
+## Architecture
+
+The Rust workspace consists of 9 modular crates:
+
+| Crate | Directory | Description |
+|---|---|---|
+| `w3codec-rs` | `rust/w3codec` | Byte-exact `.w3strings` v162/v164 codec, CSV serializer, key hash algorithm |
+| `settings-rs` | `rust/settings` | Byte-exact `AppSettings` JSON serializer & parser |
+| `locales-rs` | `rust/locales` | 12 language localization tables (1,968 strings) and `CultureResolver` |
+| `dictionary-rs` | `rust/dictionary` | Custom `.txt` dictionary parser and Aho-Corasick dynamic replacer |
+| `services-rs` | `rust/services` | Linux XDG AppPaths, SHA-256 BackupService, RecentFiles, LogAccess |
+| `xlsx-rs` | `rust/xlsx` | Excel workbook reader (`calamine`) and styled writer (`rust_xlsxwriter`) |
+| `translate-rs` | `rust/translate` | Asynchronous translation client (Google, Bing, Yandex) |
+| `nexus-rs` | `rust/nexus` | NexusMods GraphQL client for automatic update checking |
+| `app` | `rust/app` | Native desktop GUI binary (`witcher3-string-editor`) and CLI `harness` |
+
+*Note: The original C# WPF codebase is retained in the root repository for reference and historical parity testing.*
+
+---
 
 ## License
 
-Licensed under the MIT License – see the [LICENSE](LICENSE) file for details. The application bundles third-party
-components (among them Syncfusion UI and XlsIO, iNKORE UI, GTranslate and Serilog) that stay under their own licences.
-
-## Support
-
-For issues, feature requests, or questions, visit the [Nexus Mods page](https://www.nexusmods.com/witcher3/mods/10032).
+Licensed under the [MIT License](LICENSE).

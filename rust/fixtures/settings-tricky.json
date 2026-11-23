@@ -1,0 +1,27 @@
+{
+  "GameExePath": "C:\\Games\\żółw + <game> & 'launcher' `back` é\ud83d\udc3e\u0001\u007f",
+  "Language": "pl-PL",
+  "PageSize": 50,
+  "PreferredLanguage": "POLISH-UNKNOWN-XX",
+  "PreferredW3StringsEncoding": "UTF-8",
+  "PreferredFileType": "w3strings",
+  "Translator": "YandexTranslator",
+  "RecentItems": [
+    {
+      "FilePath": "/tmp/wüßé.txt",
+      "IsMarked": false,
+      "OpenedTime": "2026-03-04T05:06:07.9999999"
+    },
+    {
+      "FilePath": "/tmp/t2.txt",
+      "IsMarked": true,
+      "OpenedTime": "2026-03-04T05:06:07.12345670"
+    },
+    {
+      "FilePath": "/tmp/t3.txt",
+      "IsMarked": false,
+      "OpenedTime": "2024-06-30T23:00:00.500"
+    }
+  ],
+  "BackupItems": null
+}

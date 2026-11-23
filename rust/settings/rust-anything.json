@@ -1,0 +1,10 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "..",
+  "unit": "Witcher3StringEditor.Models",
+  "language": "csharp",
+  "kind": "ffi",
+  "crate_name": "settings-rs",
+  "exports": [],
+  "classes": []
+}

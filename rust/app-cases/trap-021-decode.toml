@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "rust/fixtures/bad-magic.w3strings", "日本語"]
+status.code = 3
+fs.sandbox = true

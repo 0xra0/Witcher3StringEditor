@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "rust/fixtures/truncated-head.w3strings", "out.json"]
+status.code = 3
+fs.sandbox = true

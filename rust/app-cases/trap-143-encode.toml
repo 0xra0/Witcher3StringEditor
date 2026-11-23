@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["encode", "é", "out", "en", "utf16"]
+status.code = 3
+fs.sandbox = true

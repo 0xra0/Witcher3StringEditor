@@ -1,0 +1,12 @@
+[package]
+name = "services-rs"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+settings-rs = { path = "../settings" }
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+open = "5"

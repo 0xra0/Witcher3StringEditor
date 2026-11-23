@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["encode", "rust/fixtures/in-bad-strid.json", "ılık ırmak", "en", "utf16"]
+status.code = 1
+fs.sandbox = true

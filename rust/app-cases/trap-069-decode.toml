@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "rust/fixtures/en-164.w3strings", "héllo wörld"]
+status.code = 0
+fs.sandbox = true

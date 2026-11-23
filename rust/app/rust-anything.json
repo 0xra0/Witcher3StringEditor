@@ -1,0 +1,38 @@
+{
+  "schema": "rust-anything/front-door@1",
+  "name": "harness",
+  "commands": [
+    "csv-decode",
+    "csv-encode",
+    "decode",
+    "encode",
+    "hash",
+    "settings-default",
+    "settings-roundtrip"
+  ],
+  "units": [
+    {
+      "name": "w3codec",
+      "crate": "w3codec-rs",
+      "path": "../w3codec",
+      "commands": [
+        "hash",
+        "decode",
+        "encode",
+        "csv-decode",
+        "csv-encode"
+      ],
+      "switch": "RUST_ANYTHING_UNIT_W3CODEC"
+    },
+    {
+      "name": "settings",
+      "crate": "settings-rs",
+      "path": "../settings",
+      "commands": [
+        "settings-default",
+        "settings-roundtrip"
+      ],
+      "switch": "RUST_ANYTHING_UNIT_SETTINGS"
+    }
+  ]
+}

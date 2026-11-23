@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["encode", "rust/fixtures/in-hash-only.json", "out", "en", "utf16"]
+status.code = 0
+fs.sandbox = true

@@ -1,0 +1,27 @@
+{
+  "GameExePath": "C:\\Games\\\u017C\u00F3\u0142w \u002B \u003Cgame\u003E \u0026 \u0027launcher\u0027 \u0060back\u0060 \u00E9\uD83D\uDC3E\u0001\u007F",
+  "Language": "pl-PL",
+  "PageSize": 50,
+  "PreferredLanguage": "en",
+  "PreferredW3StringsEncoding": "utf-8",
+  "PreferredFileType": "W3Strings",
+  "Translator": "YandexTranslator",
+  "RecentItems": [
+    {
+      "FilePath": "/tmp/w\u00FC\u00DF\u00E9.txt",
+      "IsMarked": false,
+      "OpenedTime": "2026-03-04T05:06:07.9999999"
+    },
+    {
+      "FilePath": "/tmp/t2.txt",
+      "IsMarked": true,
+      "OpenedTime": "2026-03-04T05:06:07.1234567"
+    },
+    {
+      "FilePath": "/tmp/t3.txt",
+      "IsMarked": false,
+      "OpenedTime": "2024-06-30T23:00:00.5"
+    }
+  ],
+  "BackupItems": []
+}

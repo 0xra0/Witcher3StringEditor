@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "héllo wörld", "out.json"]
+status.code = 3
+fs.sandbox = true

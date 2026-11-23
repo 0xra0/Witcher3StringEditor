@@ -1,0 +1,30 @@
+{
+  "GameExePath": "/home/games/witcher3/bin/witcher3.exe",
+  "Language": "de-DE",
+  "PageSize": 100,
+  "PreferredLanguage": "cn",
+  "PreferredW3StringsEncoding": "utf-8",
+  "PreferredFileType": "W3Strings",
+  "Translator": "GoogleTranslator",
+  "RecentItems": [
+    {
+      "FilePath": "/tmp/a.w3strings",
+      "IsMarked": true,
+      "OpenedTime": "2026-01-02T03:04:05"
+    },
+    {
+      "FilePath": "/tmp/b.csv",
+      "IsMarked": false,
+      "OpenedTime": "2025-12-31T23:59:59.1234567"
+    }
+  ],
+  "BackupItems": [
+    {
+      "FileName": "en.w3strings",
+      "Hash": "abc123",
+      "OrginPath": "/tmp/en.w3strings",
+      "BackupPath": "/backup/en.w3strings",
+      "BackupTime": "2026-02-03T04:05:06.789"
+    }
+  ]
+}

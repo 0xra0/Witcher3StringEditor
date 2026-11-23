@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["csv-decode", "rust/fixtures/en.csv", "out.json"]
+status.code = 0
+fs.sandbox = true

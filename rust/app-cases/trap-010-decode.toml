@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "👍🏽 thumbs", "out.json"]
+status.code = 3
+fs.sandbox = true

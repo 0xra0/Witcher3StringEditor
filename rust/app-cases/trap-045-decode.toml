@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["decode", "rust/fixtures/cn-164.w3strings", "straße"]
+status.code = 0
+fs.sandbox = true

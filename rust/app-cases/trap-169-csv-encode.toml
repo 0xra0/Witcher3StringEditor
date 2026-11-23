@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["csv-encode", "héllo wörld", "out", "en"]
+status.code = 3
+fs.sandbox = true

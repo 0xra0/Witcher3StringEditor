@@ -1,0 +1,5 @@
+{"name": "settings-default-settings-default", "args": ["settings-default", "out.json"]}
+{"name": "settings-roundtrip-settings-full", "args": ["settings-roundtrip", "rust/fixtures/settings-full.json", "out.json"]}
+{"name": "settings-roundtrip-settings-unknown", "args": ["settings-roundtrip", "rust/fixtures/settings-unknown.json", "out.json"]}
+{"name": "settings-roundtrip-settings-minimal", "args": ["settings-roundtrip", "rust/fixtures/settings-minimal.json", "out.json"]}
+{"name": "settings-roundtrip-settings-tricky", "args": ["settings-roundtrip", "rust/fixtures/settings-tricky.json", "out.json"]}

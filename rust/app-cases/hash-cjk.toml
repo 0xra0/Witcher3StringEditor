@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["hash", "杰洛特"]
+status.code = 0
+fs.sandbox = true

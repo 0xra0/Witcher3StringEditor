@@ -1,0 +1,4 @@
+bin.name = "harness"
+args = ["csv-encode", "rust/fixtures/in-invalid-hex.json", "out", "en"]
+status.code = 0
+fs.sandbox = true
