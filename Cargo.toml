@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = [
+    "rust/w3codec",
+    "rust/settings",
+    "rust/locales",
+    "rust/dictionary",
+    "rust/services",
+    "rust/xlsx",
+    "rust/translate",
+    "rust/nexus",
+    "rust/app",
+]
+default-members = ["rust/app"]
