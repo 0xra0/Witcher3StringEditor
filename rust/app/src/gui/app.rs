@@ -21,6 +21,10 @@ use super::dialogs::*;
 pub struct Witcher3StringEditorApp {
     pub settings: Settings,
     pub items: Vec<W3StringItem>,
+    saved_items: Vec<W3StringItem>,
+    pending_open: Option<PathBuf>,
+    confirm_close: bool,
+    file_error: Option<String>,
     pub file_path: Option<PathBuf>,
     pub output_folder: PathBuf,
     pub search_query: String,
@@ -82,6 +86,10 @@ impl Witcher3StringEditorApp {
         Self {
             settings,
             items: Vec::new(),
+            saved_items: Vec::new(),
+            pending_open: None,
+            confirm_close: false,
+            file_error: None,
             file_path: None,
             output_folder: initial_dir,
             search_query: String::new(),
@@ -114,35 +122,27 @@ impl Witcher3StringEditorApp {
         }
     }
 
+    fn request_open(&mut self, path: &Path) {
+        if self.items == self.saved_items {
+            self.load_file(path);
+        } else {
+            self.pending_open = Some(path.to_path_buf());
+        }
+    }
+
     pub fn load_file(&mut self, path: &Path) {
         let path_buf = path.to_path_buf();
-        let ext = path
-            .extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("")
-            .to_ascii_lowercase();
-
-        let res: Result<Vec<W3StringItem>, String> = match ext.as_str() {
-            "w3strings" => {
-                match fs::read(path) {
-                    Ok(bytes) => codec::decode(&bytes).map(|d| d.items),
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            "csv" => {
-                match fs::read_to_string(path) {
-                    Ok(text) => Ok(codec::csv_decode(&text)),
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            "xlsx" => xlsx_rs::read_xlsx(path),
-            _ => Err("Unsupported file format (must be .w3strings, .csv, or .xlsx)".into()),
-        };
+        let res = read_items(path);
 
         match res {
             Ok(mut loaded) => {
                 loaded.sort_by(|a, b| a.str_id.cmp(&b.str_id));
+                self.saved_items.clone_from(&loaded);
                 self.items = loaded;
+                self.edit_dialog_state = None;
+                self.translate_state = TranslateDialogState::default();
+                self.show_translate = false;
+                self.show_save = false;
                 self.file_path = Some(path_buf.clone());
                 if let Some(parent) = path.parent() {
                     self.output_folder = parent.to_path_buf();
@@ -158,56 +158,40 @@ impl Witcher3StringEditorApp {
                 );
             }
             Err(e) => {
-                self.log_service.add(
-                    "ERROR",
-                    &format!("Failed to open file {}: {e}", path.display()),
-                );
+                self.report_file_error(format!("Failed to open file {}: {e}", path.display()));
             }
         }
     }
 
     pub fn merge_file(&mut self, path: &Path) {
-        let ext = path
-            .extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("")
-            .to_ascii_lowercase();
-
-        let res = match ext.as_str() {
-            "w3strings" => {
-                match fs::read(path) {
-                    Ok(bytes) => codec::decode(&bytes).map(|d| d.items),
-                    Err(e) => Err(e.to_string()),
-                }
+        let new_items = match read_items(path) {
+            Ok(items) => items,
+            Err(e) => {
+                self.report_file_error(format!("Failed to merge file {}: {e}", path.display()));
+                return;
             }
-            "csv" => {
-                match fs::read_to_string(path) {
-                    Ok(text) => Ok(codec::csv_decode(&text)),
-                    Err(e) => Err(e.to_string()),
-                }
-            }
-            "xlsx" => xlsx_rs::read_xlsx(path),
-            _ => Err("Unsupported file format".into()),
         };
-
-        if let Ok(new_items) = res {
-            let mut matched = 0;
-            for new_item in new_items {
-                if let Some(existing) = self.items.iter_mut().find(|it| it.str_id == new_item.str_id)
-                    && existing.text != new_item.text
-                {
-                    if existing.old_text.is_empty() {
-                        existing.old_text = existing.text.clone();
-                    }
-                    existing.text = new_item.text;
-                    matched += 1;
+        let mut matched = 0;
+        for new_item in new_items {
+            if let Some(existing) = self.items.iter_mut().find(|it| it.str_id == new_item.str_id)
+                && existing.text != new_item.text
+            {
+                if existing.old_text.is_empty() {
+                    existing.old_text = existing.text.clone();
                 }
+                existing.text = new_item.text;
+                matched += 1;
             }
-            self.log_service.add(
-                "INFO",
-                &format!("Merged {matched} item texts from {}", path.display()),
-            );
         }
+        self.log_service.add(
+            "INFO",
+            &format!("Merged {matched} item texts from {}", path.display()),
+        );
+    }
+
+    fn report_file_error(&mut self, message: String) {
+        self.log_service.add("ERROR", &message);
+        self.file_error = Some(message);
     }
 
     pub fn create_next_str_id(&self) -> String {
@@ -250,6 +234,11 @@ impl Witcher3StringEditorApp {
 
 impl eframe::App for Witcher3StringEditorApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if ctx.input(|input| input.viewport().close_requested()) && self.items != self.saved_items {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            self.confirm_close = true;
+        }
+
         // Apply theme
         if self.dark_mode {
             ctx.set_visuals(egui::Visuals::dark());
@@ -267,7 +256,7 @@ impl eframe::App for Witcher3StringEditorApp {
             if let Some(file) = i.raw.dropped_files.first()
                 && let Some(path) = &file.path
             {
-                self.load_file(path);
+                self.request_open(path);
             }
         });
 
@@ -311,7 +300,7 @@ impl eframe::App for Witcher3StringEditorApp {
                         .add_filter("Witcher 3 Strings", &["w3strings", "csv", "xlsx"])
                         .pick_file()
                 {
-                    self.load_file(&path);
+                    self.request_open(&path);
                 }
 
                 if ui.button("🕒 Recent").clicked() {
@@ -562,14 +551,16 @@ impl eframe::App for Witcher3StringEditorApp {
         });
 
         // Dialog Windows
-        if self.show_save {
-            show_save_dialog(
+        if self.show_save
+            && show_save_dialog(
                 ctx,
                 &mut self.save_state,
                 &self.items,
                 &mut self.settings,
                 &mut self.show_save,
-            );
+            )
+        {
+            self.saved_items.clone_from(&self.items);
         }
 
         if self.show_settings {
@@ -598,7 +589,7 @@ impl eframe::App for Witcher3StringEditorApp {
                 &mut self.show_recent,
             );
             if let Some(path_str) = self.recent_state.open_file.take() {
-                self.load_file(Path::new(&path_str));
+                self.request_open(Path::new(&path_str));
             }
         }
 
@@ -645,6 +636,53 @@ impl eframe::App for Witcher3StringEditorApp {
         if self.show_about {
             show_about_dialog(ctx, &self.settings, &mut self.show_about);
         }
+
+        if self.confirm_close || self.pending_open.is_some() {
+            let response = egui::Modal::new(egui::Id::new("discard_edits")).show(ctx, |ui| {
+                ui.heading("Discard unsaved changes?");
+                ui.horizontal(|ui| {
+                    if ui.button("Keep editing").clicked() {
+                        Some(false)
+                    } else if ui.button("Discard changes").clicked() {
+                        Some(true)
+                    } else {
+                        None
+                    }
+                }).inner
+            });
+            if let Some(discard) = response.inner.or_else(|| response.should_close().then_some(false)) {
+                let pending = self.pending_open.take();
+                if std::mem::take(&mut self.confirm_close) && discard {
+                    self.saved_items.clone_from(&self.items);
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                } else if discard && let Some(path) = pending {
+                    self.load_file(&path);
+                }
+            }
+        }
+
+        if let Some(message) = &self.file_error {
+            let response = egui::Modal::new(egui::Id::new("file_error")).show(ctx, |ui| {
+                ui.label(message);
+                ui.button("OK").clicked()
+            });
+            if response.inner || response.should_close() {
+                self.file_error = None;
+            }
+        }
+    }
+}
+
+fn read_items(path: &Path) -> Result<Vec<W3StringItem>, String> {
+    let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+    match ext.to_ascii_lowercase().as_str() {
+        "w3strings" => {
+            let bytes = fs::read(path).map_err(|e| e.to_string())?;
+            codec::decode_strict(&bytes).map(|decoded| decoded.items)
+        }
+        "csv" => fs::read_to_string(path).map(|text| codec::csv_decode(&text)).map_err(|e| e.to_string()),
+        "xlsx" => xlsx_rs::read_xlsx(path),
+        _ => Err("Unsupported file format (must be .w3strings, .csv, or .xlsx)".into()),
     }
 }
 
