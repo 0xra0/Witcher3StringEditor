@@ -41,7 +41,8 @@ pub fn show_save_dialog(
     items: &[W3StringItem],
     settings: &mut Settings,
     open: &mut bool,
-) {
+) -> bool {
+    let mut saved = false;
     let mut is_open = *open;
     let mut close = false;
     Window::new(locales::get(&settings.language, "SaveDialogTitle"))
@@ -150,34 +151,19 @@ pub fn show_save_dialog(
                         .output_dir
                         .join(format!("{}.{}", lang.code.to_ascii_lowercase(), ext));
 
-                    // Backup if exists
-                    if file_path.exists() {
-                        let _ = BackupService::backup(&file_path, settings);
-                    }
-
-                    let res: Result<(), String> = match state.format {
-                        FileType::W3Strings => {
-                            let version = match state.encoding {
-                                PayloadEncoding::Utf8 => 164,
-                                PayloadEncoding::Utf16Le => 162,
-                            };
-                            match codec::encode(items, lang.key, version) {
-                                Some(bytes) => {
-                                    std::fs::write(&file_path, bytes).map_err(|e| e.to_string())
-                                }
-                                None => Err("Failed to encode w3strings file".into()),
-                            }
+                    let res = save_items(&file_path, items, state, lang, || {
+                        if file_path.try_exists().map_err(|e| e.to_string())? {
+                            BackupService::backup(&file_path, settings)
+                                .map_err(|e| format!("Could not back up the existing file: {e}"))?;
+                            services_rs::SettingsPersistenceService::save(settings)
+                                .map_err(|e| format!("Could not save the backup record: {e}"))?;
                         }
-                        FileType::Csv => {
-                            let content = codec::csv_encode(items, lang.code, lang.magic);
-                            std::fs::write(&file_path, content.as_bytes())
-                                .map_err(|e| e.to_string())
-                        }
-                        FileType::Excel => xlsx_rs::write_xlsx(&file_path, items),
-                    };
+                        Ok(())
+                    });
 
                     match res {
                         Ok(()) => {
+                            saved = true;
                             state.message = Some((
                                 true,
                                 format!("Successfully saved {} items to {}", items.len(), file_path.display()),
@@ -202,6 +188,44 @@ pub fn show_save_dialog(
         is_open = false;
     }
     *open = is_open;
+    saved
+}
+
+fn save_items(
+    path: &Path,
+    items: &[W3StringItem],
+    state: &SaveDialogState,
+    lang: codec::W3Language,
+    prepare_overwrite: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    let bytes = match state.format {
+        FileType::W3Strings => {
+            let version = match state.encoding {
+                PayloadEncoding::Utf8 => 164,
+                PayloadEncoding::Utf16Le => 162,
+            };
+            codec::encode(items, lang.key, version).ok_or("Failed to encode w3strings file")?
+        }
+        FileType::Csv => {
+            if let Some(item) = items.iter().find(|item| {
+                [&item.str_id, &item.key_hex, &item.key_name, &item.text]
+                    .into_iter()
+                    .any(|field| field.contains(['\r', '\n']))
+            }) {
+                return Err(format!(
+                    "CSV cannot preserve line breaks (string ID {}). Choose W3Strings or Excel.",
+                    item.str_id
+                ));
+            }
+            codec::csv_encode(items, lang.code, lang.magic).into_bytes()
+        }
+        FileType::Excel => {
+            prepare_overwrite()?;
+            return xlsx_rs::write_xlsx(path, items);
+        }
+    };
+    prepare_overwrite()?;
+    std::fs::write(path, bytes).map_err(|e| e.to_string())
 }
 
 // ---------------------------------------------------------------------------
@@ -795,12 +819,30 @@ pub fn show_log_dialog(
 // ---------------------------------------------------------------------------
 
 pub struct TranslateDialogState {
-    pub is_batch: bool,
-    pub source_lang: String,
-    pub target_lang: String,
-    pub current_index: usize,
-    pub translated_text: String,
-    pub status_message: Option<String>,
+    is_batch: bool,
+    source_lang: String,
+    target_lang: String,
+    current_index: usize,
+    translated_text: String,
+    preview_source: Option<(usize, W3StringItem)>,
+    status_message: Option<String>,
+    job: Option<TranslationJob>,
+}
+
+struct TranslationJob {
+    task: tokio::task::JoinHandle<()>,
+    result: std::sync::mpsc::Receiver<TranslationResult>,
+}
+
+impl Drop for TranslationJob {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
+
+enum TranslationResult {
+    Single(usize, W3StringItem, Result<String, String>),
+    Batch(Vec<W3StringItem>, Vec<(usize, String)>, Option<String>),
 }
 
 impl Default for TranslateDialogState {
@@ -811,8 +853,103 @@ impl Default for TranslateDialogState {
             target_lang: "pl".into(),
             current_index: 0,
             translated_text: String::new(),
+            preview_source: None,
             status_message: None,
+            job: None,
         }
+    }
+}
+
+impl TranslateDialogState {
+    fn start(
+        &mut self,
+        ctx: &egui::Context,
+        items: &[W3StringItem],
+        client: &TranslationClient,
+        provider: &str,
+    ) {
+        let source = self.source_lang.clone();
+        let target = self.target_lang.clone();
+        let provider = provider.to_owned();
+        let ctx = ctx.clone();
+        let client = client.clone();
+        let index = self.current_index;
+        let batch = self.is_batch;
+        let snapshot = if batch { items.to_vec() } else { vec![items[index].clone()] };
+        self.preview_source = None;
+        self.translated_text.clear();
+        self.status_message = Some("Translating…".into());
+        let (send, result) = std::sync::mpsc::channel();
+        let task = tokio::spawn(async move {
+            let result = if batch {
+                let mut translations = Vec::new();
+                let mut error = None;
+                for (index, item) in snapshot.iter().enumerate() {
+                    if item.text.trim().is_empty() {
+                        continue;
+                    }
+                    match client.translate(&provider, &item.text, &source, &target).await {
+                        Ok(text) => translations.push((index, text)),
+                        Err(err) => {
+                            error = Some(err);
+                            break;
+                        }
+                    }
+                }
+                TranslationResult::Batch(snapshot, translations, error)
+            } else {
+                let item = snapshot.into_iter().next().expect("single item snapshot");
+                let result = client.translate(&provider, &item.text, &source, &target).await;
+                TranslationResult::Single(index, item, result)
+            };
+            let _ = send.send(result);
+            ctx.request_repaint();
+        });
+        self.job = Some(TranslationJob { task, result });
+    }
+
+    fn poll(&mut self, items: &mut [W3StringItem]) {
+        let Some(job) = &self.job else { return };
+        let result = job.result.try_recv();
+        if matches!(result, Err(std::sync::mpsc::TryRecvError::Empty)) {
+            return;
+        }
+        self.job = None;
+        self.status_message = match result {
+            Ok(TranslationResult::Single(index, source, result))
+                if index == self.current_index && items.get(index) == Some(&source) =>
+            {
+                match result {
+                    Ok(text) => {
+                        self.translated_text = text;
+                        self.preview_source = Some((index, source));
+                        None
+                    }
+                    Err(err) => Some(format!("Translation failed: {err}")),
+                }
+            }
+            Ok(TranslationResult::Batch(snapshot, translations, error)) if items == snapshot => {
+                let updated = translations.len();
+                for (index, text) in translations {
+                    apply_translation(&mut items[index], text);
+                }
+                Some(match error {
+                    Some(err) => format!("Batch stopped after {updated} translations: {err}"),
+                    None => format!("Translated {updated}/{} items.", items.len()),
+                })
+            }
+            Ok(_) => Some("The source changed. Start the translation again.".into()),
+            Err(_) => Some("Translation stopped unexpectedly.".into()),
+        };
+    }
+}
+
+fn apply_translation(item: &mut W3StringItem, text: String) {
+    if item.text != text {
+        if item.old_text.is_empty() {
+            item.old_text = item.text.clone();
+        }
+        item.text = text;
     }
 }
 
@@ -824,20 +961,27 @@ pub fn show_translate_dialog(
     settings: &Settings,
     open: &mut bool,
 ) {
+    state.poll(items);
     let mut is_open = *open;
     Window::new(locales::get(&settings.language, "TranslationDialogTitle"))
         .open(&mut is_open)
         .default_width(600.0)
         .default_height(400.0)
         .show(ctx, |ui| {
+            if let Some(msg) = &state.status_message {
+                ui.label(msg);
+            }
+            if state.job.is_some() {
+                if ui.button("Cancel translation").clicked() {
+                    state.job = None;
+                    state.status_message = Some("Translation canceled.".into());
+                }
+                return;
+            }
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut state.is_batch, false, "Single Item Mode");
                 ui.selectable_value(&mut state.is_batch, true, "Batch Items Mode");
             });
-
-            ui.add_space(8.0);
-
-            // Source and Target Languages
             ui.horizontal(|ui| {
                 ui.label("Source Language:");
                 ui.text_edit_singleline(&mut state.source_lang);
@@ -845,113 +989,59 @@ pub fn show_translate_dialog(
                 ui.text_edit_singleline(&mut state.target_lang);
                 ui.label(format!("Provider: {}", settings.translator));
             });
-
-            ui.add_space(8.0);
             ui.separator();
 
             if items.is_empty() {
                 ui.label("No items loaded to translate.");
                 return;
             }
-
-            if !state.is_batch {
-                // Single Item Mode
-                if state.current_index >= items.len() {
-                    state.current_index = items.len().saturating_sub(1);
-                }
-
-                let current_str_id = items[state.current_index].str_id.clone();
-                let current_key_name = items[state.current_index].key_name.clone();
-                let current_text = items[state.current_index].text.clone();
-
-                ui.label(format!("Item ID: {current_str_id} | Key: {current_key_name}"));
-                ui.add_space(4.0);
-
-                ui.label(RichText::new("Source Text:").strong());
-                let mut display_text = current_text.clone();
-                ui.text_edit_multiline(&mut display_text);
-
-                ui.add_space(6.0);
-                ui.label(RichText::new("Translated Text:").strong());
-                ui.text_edit_multiline(&mut state.translated_text);
-
-                ui.add_space(8.0);
-                ui.horizontal(|ui| {
-                    if ui.button("Translate").clicked() {
-                        let text = current_text.clone();
-                        let src_lang = state.source_lang.clone();
-                        let tgt_lang = state.target_lang.clone();
-                        let prov_name = settings.translator.clone();
-                        let c_clone = client.clone();
-                        if let Ok(res) = tokio::task::block_in_place(|| {
-                            tokio::runtime::Handle::current().block_on(async {
-                                c_clone.translate(&prov_name, &text, &src_lang, &tgt_lang).await
-                            })
-                        }) {
-                            state.translated_text = res;
-                        }
-                    }
-
-                    if ui.button("Apply to Item").clicked() {
-                        if items[state.current_index].old_text.is_empty() {
-                            items[state.current_index].old_text = items[state.current_index].text.clone();
-                        }
-                        items[state.current_index].text = state.translated_text.clone();
-                        state.status_message = Some("Updated item text!".into());
-                    }
-
-                    if ui.button("< Prev").clicked() && state.current_index > 0 {
-                        state.current_index -= 1;
-                        state.translated_text.clear();
-                    }
-                    ui.label(format!("{}/{}", state.current_index + 1, items.len()));
-                    if ui.button("Next >").clicked() && state.current_index + 1 < items.len() {
-                        state.current_index += 1;
-                        state.translated_text.clear();
-                    }
-                });
-            } else {
-                // Batch Mode
-                ui.label(format!("Ready to translate {} items from '{}' to '{}'.", items.len(), state.source_lang, state.target_lang));
-                ui.add_space(8.0);
-
-                if let Some(msg) = &state.status_message {
-                    ui.label(msg);
-                }
-
+            if state.is_batch {
+                ui.label(format!("Ready to translate {} items.", items.len()));
                 if ui.button("Translate All Items").clicked() {
-                    let total = items.len();
-                    let prov = settings.translator.clone();
-                    let src = state.source_lang.clone();
-                    let tgt = state.target_lang.clone();
-                    let c = client.clone();
-
-                    let mut translated = 0;
-                    for item in items.iter_mut() {
-                        if item.text.trim().is_empty() {
-                            continue;
-                        }
-                        let text = item.text.clone();
-                        let prov_c = prov.clone();
-                        let src_c = src.clone();
-                        let tgt_c = tgt.clone();
-                        let c_c = c.clone();
-                        if let Ok(res) = tokio::task::block_in_place(|| {
-                            tokio::runtime::Handle::current().block_on(async {
-                                c_c.translate(&prov_c, &text, &src_c, &tgt_c).await
-                            })
-                        }) {
-                            if item.old_text.is_empty() {
-                                item.old_text = item.text.clone();
-                            }
-                            item.text = res;
-                            translated += 1;
-                        }
-                    }
-                    state.status_message = Some(format!("Completed batch translation: {translated}/{total} items updated."));
+                    state.start(ctx, items, client, &settings.translator);
                 }
+                return;
             }
+
+            state.current_index = state.current_index.min(items.len() - 1);
+            let index = state.current_index;
+            let item = &mut items[index];
+            if state.preview_source.as_ref().is_some_and(|(i, source)| *i != index || source != item) {
+                state.preview_source = None;
+                state.translated_text.clear();
+            }
+            ui.label(format!("Item ID: {} | Key: {}", item.str_id, item.key_name));
+            ui.label(RichText::new("Source Text:").strong());
+            ui.add(egui::TextEdit::multiline(&mut item.text.as_str()));
+            ui.label(RichText::new("Translated Text:").strong());
+            if ui.text_edit_multiline(&mut state.translated_text).changed() {
+                state.preview_source = Some((index, item.clone()));
+            }
+
+            ui.horizontal(|ui| {
+                if ui.button("Translate").clicked() {
+                    state.start(ctx, items, client, &settings.translator);
+                } else if ui.add_enabled(state.preview_source.is_some(), egui::Button::new("Apply to Item")).clicked() {
+                    apply_translation(&mut items[index], state.translated_text.clone());
+                    state.preview_source = None;
+                    state.translated_text.clear();
+                    state.status_message = Some("Updated item text.".into());
+                }
+
+                let previous = ui.button("< Prev").clicked() && index > 0;
+                ui.label(format!("{}/{}", index + 1, items.len()));
+                let next = ui.button("Next >").clicked() && index + 1 < items.len();
+                if previous || next {
+                    state.current_index = if previous { index - 1 } else { index + 1 };
+                    state.preview_source = None;
+                    state.translated_text.clear();
+                    state.status_message = None;
+                }
+            });
         });
+    if !is_open && state.job.take().is_some() {
+        state.status_message = None;
+    }
     *open = is_open;
 }
 
@@ -1119,4 +1209,50 @@ pub fn show_about_dialog(
         is_open = false;
     }
     *open = is_open;
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn csv_rejects_multiline_text_before_preparing_overwrite() {
+        let item = W3StringItem {
+            str_id: "42".into(),
+            text: "first\nsecond".into(),
+            ..W3StringItem::empty()
+        };
+        let state = SaveDialogState::new(&settings_rs::port::default_settings(), Path::new("."));
+        let err = save_items(
+            Path::new("unused.csv"),
+            &[item],
+            &state,
+            codec::language_from_code("en").unwrap(),
+            || panic!("should reject incompatible data before touching the destination"),
+        ).unwrap_err();
+        assert!(err.contains("CSV cannot preserve line breaks"));
+    }
+
+    #[test]
+    fn overwrite_failure_leaves_original_bytes_intact() {
+        let dir = std::env::temp_dir().join(format!(
+            "w3-backup-test-{}", std::process::id()
+        ));
+        std::fs::create_dir(&dir).unwrap();
+        let path = dir.join("en.csv");
+        std::fs::write(&path, b"original").unwrap();
+        let state = SaveDialogState::new(&settings_rs::port::default_settings(), &dir);
+        let result = save_items(
+            &path,
+            &[W3StringItem::empty()],
+            &state,
+            codec::language_from_code("en").unwrap(),
+            || Err("backup failed".into()),
+        );
+        let saved = std::fs::read(&path);
+        std::fs::remove_dir_all(dir).unwrap();
+        assert_eq!(result.unwrap_err(), "backup failed");
+        assert_eq!(saved.unwrap(), b"original");
+    }
 }

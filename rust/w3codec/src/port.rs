@@ -337,7 +337,7 @@ fn read_u16(bytes: &[u8], at: usize) -> Result<u16, String> {
 
 impl Storage {
     /// Read the stored form: layout only; texts are fetched afterwards.
-    fn read(bytes: &[u8]) -> Result<Self, String> {
+    fn read(bytes: &[u8], strict: bool) -> Result<Self, String> {
         let unreadable = || "The stream does not hold a readable w3strings container".to_string();
         if bytes.len() < MIN_SIZE {
             return Err(format!(
@@ -381,6 +381,9 @@ impl Storage {
         let start = cursor;
         let version = stored_version(declared, start, units_declared, key2_offset);
         let held = fit_buffer(start, units_declared, version, key2_offset)?;
+        if strict && held != units_declared {
+            return Err("The string buffer is truncated".into());
+        }
 
         let mut strings = Vec::with_capacity(block1.len() / 12);
         for chunk in block1.as_chunks::<12>().0 {
@@ -402,7 +405,7 @@ impl Storage {
             .iter()
             .position(|e| e.offset as u64 + e.length as u64 > held as u64);
         if let Some(index) = outside {
-            if version < 164 {
+            if strict || version < 164 {
                 let e = &strings[index];
                 return Err(format!(
                     "string entry #{index} points outside the string buffer (offset {}, length {}, buffer {held} unit(s))",
@@ -520,7 +523,16 @@ fn fit_buffer(start: usize, units: u32, version: u32, key2_offset: usize) -> Res
 
 /// Decode a stored container into items, as the harness's `decode` prints them.
 pub fn decode(bytes: &[u8]) -> Result<Decoded, String> {
-    let storage = Storage::read(bytes)?;
+    decode_with_mode(bytes, false)
+}
+
+/// Decode for editing without silently dropping entries from damaged containers.
+pub fn decode_strict(bytes: &[u8]) -> Result<Decoded, String> {
+    decode_with_mode(bytes, true)
+}
+
+fn decode_with_mode(bytes: &[u8], strict: bool) -> Result<Decoded, String> {
+    let storage = Storage::read(bytes, strict)?;
     let unit = unit_size(storage.version);
     let mut decoded_entries = Vec::with_capacity(storage.strings.len());
     for entry in &storage.strings {
@@ -832,6 +844,24 @@ pub fn csv_decode(content: &str) -> Vec<W3StringItem> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn strict_decode_rejects_partial_utf8_without_changing_recovery() {
+        let item = W3StringItem {
+            str_id: "1".into(),
+            text: "first\nsecond".into(),
+            ..W3StringItem::empty()
+        };
+        let key = language_from_code("en").unwrap().key;
+        let mut bytes = encode(std::slice::from_ref(&item), key, 164).unwrap();
+        assert_eq!(decode_strict(&bytes).unwrap().items, [item]);
+
+        let footer = bytes.split_off(bytes.len() - 2);
+        bytes.truncate(bytes.len() - 5);
+        bytes.extend(footer);
+        assert!(decode_strict(&bytes).is_err());
+        assert!(decode(&bytes).unwrap().items.is_empty());
+    }
 
     #[test]
     fn hash_ascii_and_unicode() {

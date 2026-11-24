@@ -29,7 +29,13 @@ Originally built in C# (.NET/WPF), this project has been rewritten into **100% p
   - **Backup Manager**: Automatic backups on save with SHA-256 deduplication, preview, delete, and instant restore.
   - **Recent Files**: MRU file tracking with search, quick open, and favoriting (pin/unpin).
   - **Dictionary Manager**: Custom `.txt` word replacement dictionaries with high-speed multi-pattern replacement via `aho-corasick`.
-  - **Translation Helper**: Single-item and batch translation with asynchronous Google Translate, Bing/Microsoft Translator, and Yandex endpoints.
+  <!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:8b15cd57a6adc8cb800cc55f02128d1642d736d246e3c76440b9f72577509dee -->
+
+- **Translation Helper**: Translate one item or a batch in the background with Google or Microsoft. The app reports provider failures without sending text to another provider. Yandex is currently unavailable.
+
+<!-- /coderabbit-ai-generated:v1 -->
   - **Log Viewer**: Real-time thread-safe log buffer with severity filtering and log export.
   - **About Window**: Displays version information and checks for NexusMods updates.
 - **12 Localized Languages**: Full UI translations for English, Polish, German, French, Spanish, Italian, Russian, Japanese, Simplified Chinese, Traditional Chinese, Korean, and Brazilian Portuguese (1,968 localized strings).

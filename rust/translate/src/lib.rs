@@ -49,7 +49,7 @@ impl TranslationClient {
             "GoogleTranslator" => self.translate_google(text, from_lang, to_lang).await,
             "MicrosoftTranslator" => self.translate_microsoft(text, from_lang, to_lang).await,
             "YandexTranslator" => self.translate_yandex(text, from_lang, to_lang).await,
-            _ => self.translate_google(text, from_lang, to_lang).await,
+            _ => Err(format!("Unknown translation provider: {translator_name}")),
         }
     }
 
@@ -70,7 +70,7 @@ impl TranslationClient {
             .get(&url)
             .send()
             .await
-            .map_err(|e| format!("Google translate request failed: {e}"))?;
+            .map_err(|e| format!("Google translate request failed: {}", e.without_url()))?;
 
         if !resp.status().is_success() {
             return Err(format!("Google translate returned status {}", resp.status()));
@@ -100,34 +100,29 @@ impl TranslationClient {
             form.push(("fromLang", from_lang));
         }
 
-        let resp = self
+        let response = self
             .http
             .post(url)
             .form(&form)
             .send()
-            .await;
-
-        if let Ok(r) = resp
-            && r.status().is_success()
-            && let Ok(body) = r.text().await
-            && let Ok(json) = serde_json::from_str::<Value>(&body)
-            && let Some(t) = json.pointer("/0/translations/0/text").and_then(|v| v.as_str())
-        {
-            return Ok(t.to_string());
-        }
-
-        // Fallback to Google if Bing fails
-        self.translate_google(text, from_lang, to_lang).await
+            .await
+            .and_then(reqwest::Response::error_for_status)
+            .map_err(|e| format!("Microsoft translation request failed: {e}"))?;
+        let json: Value = response.json().await
+            .map_err(|e| format!("Invalid Microsoft translation response: {e}"))?;
+        json.pointer("/0/translations/0/text")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| "No translation text in Microsoft response".into())
     }
 
     pub async fn translate_yandex(
         &self,
-        text: &str,
-        from_lang: &str,
-        to_lang: &str,
+        _text: &str,
+        _from_lang: &str,
+        _to_lang: &str,
     ) -> Result<String, String> {
-        // Fallback to Google if Yandex public endpoint is restricted
-        self.translate_google(text, from_lang, to_lang).await
+        Err("Yandex translation is unavailable. Select another provider in Settings.".into())
     }
 }
 
@@ -170,6 +165,15 @@ fn urlencoding(input: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn unsupported_providers_return_an_error() {
+        let client = TranslationClient::new();
+        assert!(client.translate("YandexTranslator", "test", "en", "pl")
+            .await.unwrap_err().contains("Yandex translation is unavailable"));
+        assert!(client.translate("Unknown", "test", "en", "pl")
+            .await.unwrap_err().contains("Unknown translation provider"));
+    }
 
     #[test]
     fn test_parse_google_response() {
